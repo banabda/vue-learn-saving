@@ -1,12 +1,13 @@
 <template>
-  <div id="app">
+  <div id="app" class="container">
     <notifications position="top right" />
     <img src="./assets/logo.png" />
-    <div>
+    <div v-if="user">
       <h2 v-if="user">Halo {{ user }}</h2>
       <el-button @click="createEmployee('Bagas', new Date().toLocaleString())">
         Add
       </el-button>
+      <el-button @click="logout"> Logout </el-button>
       <ul v-for="(emp, index) in employeesData" :key="index">
         <li>
           <span style="margin-right: 50px">{{ emp.name }} {{ emp.date }}</span>
@@ -22,6 +23,8 @@
         </li>
       </ul>
     </div>
+    <login v-else />
+    <el-button @click="login">login</el-button>
     <!-- <HelloWorld msg="Welcome to Your Vue.js App" /> -->
   </div>
 </template>
@@ -29,27 +32,35 @@
 <script>
 import DB from "./firebase/db";
 import Auth from "./firebase/auth";
+// import Storage from "./firebase/storage";
+import Login from "./components/Login.vue";
 
 export default {
   name: "app",
-  components: {},
+  components: { Login },
   data() {
     return {
       employeesData: [],
       user: null,
+      coll: DB.collection("cities").get(),
+      dataset: null,
     };
   },
   mounted() {
+    Auth.onAuthStateChanged((e) => (e ? (this.user = e.email) : this.user));
     this.readEmployees();
-    Auth.onAuthStateChanged((e) => (this.user = e.email));
     // this.login();
-    // DB.collection("employees")
-    //   .get()
-    //   .then((querySnapshot) => {
-    //     querySnapshot.forEach((doc) => {
-    //       console.log(doc.id);
-    //     });
-    //   });
+    const doc = DB.collection("employees");
+    console.log("asda");
+    doc.onSnapshot(
+      (docSnapshot) => {
+        docSnapshot.docs.forEach((doc) => console.log(doc.id));
+        // ...
+      },
+      (err) => {
+        console.log(`Encountered error: ${err}`);
+      }
+    );
   },
   methods: {
     compare(key, order = "asc") {
@@ -73,10 +84,14 @@ export default {
         return order === "desc" ? comparison * -1 : comparison;
       };
     },
+    snap() {},
     login() {
       Auth.signInWithEmailAndPassword("test@mail.com", "test123").then(
         (e) => (this.user = e.user.email)
       );
+    },
+    logout() {
+      Auth.signOut().then(() => (this.user = null));
     },
     readEmployees() {
       var _employees = [];
